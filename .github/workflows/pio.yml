@@ -1,0 +1,27 @@
+name: PlatformIO CI
+
+on: [ push ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio/.cache
+          key: ${{ runner.os }}-pio
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+      - name: Build project
+        run: pio run
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware.elf
+          path: .pio/build/esp-ir-receiver/firmware.elf
