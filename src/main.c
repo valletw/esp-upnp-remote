@@ -4,6 +4,7 @@
  */
 
 #include "board.h"
+#include "led.h"
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -39,9 +40,11 @@ void app_main(void)
         (chip_info.features & CHIP_FEATURE_BLE) ? " BLE" : "",
         (chip_info.features & CHIP_FEATURE_IEEE802154) ? " IEEE-802.15.4" : "");
     // Process.
+    led_soft_t led_soft = SOFT_ON;
     while (1)
     {
+        led_soft_set(led_soft);
+        led_soft = (led_soft == SOFT_ON) ? SOFT_OFF : SOFT_ON;
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        printf(".");
     }
 }

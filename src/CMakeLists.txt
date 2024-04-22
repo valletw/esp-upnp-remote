@@ -1,4 +1,4 @@
 idf_component_register(
     SRCS
-        main.c board.c
+        main.c board.c led.c
 )

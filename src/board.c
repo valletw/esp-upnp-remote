@@ -5,6 +5,7 @@
 
 #include "board.h"
 #include "board_cfg.h"
+#include "led.h"
 #include "esp_err.h"
 #include "driver/gpio.h"
 
@@ -28,4 +29,9 @@ void board_initialise(void)
     ESP_ERROR_CHECK(gpio_set_pull_mode(BOARD_IO_IR_RX, GPIO_PULLUP_ONLY));
     ESP_ERROR_CHECK(gpio_set_intr_type(BOARD_IO_IR_RX, GPIO_INTR_NEGEDGE));
     ESP_ERROR_CHECK(gpio_intr_enable(BOARD_IO_IR_RX));
+    // LEDs configuration.
+    led_init();
+    led_wifi_set(WIFI_NOT_CONNECTED);
+    led_bt_set(BT_NOT_CONNECTED);
+    led_soft_set(SOFT_OFF);
 }
