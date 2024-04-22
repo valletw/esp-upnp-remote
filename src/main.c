@@ -3,6 +3,7 @@
  * Copyright (c) 2024 William Vallet
  */
 
+#include "board.h"
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -13,6 +14,7 @@
 
 void app_main(void)
 {
+    board_initialise();
     printf("*** ESP UPnP remote ***\r\n");
     // Get chip information.
     esp_chip_info_t chip_info;
