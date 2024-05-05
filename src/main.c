@@ -4,6 +4,8 @@
  */
 
 #include "board.h"
+#include "board_cfg.h"
+#include "ir_decoder.h"
 #include "led.h"
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
@@ -44,6 +46,8 @@ void app_main(void)
     board_initialise();
     printf("*** ESP UPnP remote ***\r\n");
     display_chip_information();
+    // IR decoder configuration.
+    ir_decoder_init(BOARD_IO_IR_RX);
     // Process.
     led_soft_t led_soft = SOFT_ON;
     while (1)
