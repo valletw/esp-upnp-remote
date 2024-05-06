@@ -5,6 +5,7 @@
 
 #include "board.h"
 #include "board_cfg.h"
+#include "command.h"
 #include "ir_decoder.h"
 #include "led.h"
 #include "sdkconfig.h"
@@ -46,6 +47,8 @@ void app_main(void)
     board_initialise();
     printf("*** ESP UPnP remote ***\r\n");
     display_chip_information();
+    // Initialise command processing.
+    command_init();
     // IR decoder configuration.
     ir_decoder_init(BOARD_IO_IR_RX);
     // Process.

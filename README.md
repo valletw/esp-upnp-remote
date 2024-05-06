@@ -41,3 +41,14 @@ pio run --target upload
 # Erase device.
 pio run --target erase
 ```
+
+## Supported commands
+
+The following control commands are:
+
+- **Play/Pause**: Resume/Suspend the stream
+- **Previous**: Request previous stream
+- **Next**: Request next stream
+- **Volume up**: Increase the volume
+- **Volume down**: Decrease the volume
+- **Mute**: Cut off the volume
