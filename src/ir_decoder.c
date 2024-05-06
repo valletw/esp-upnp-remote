@@ -74,14 +74,16 @@ static void ir_decoder_task_handler(void *context)
         if (pdPASS == xQueueReceive(
                 (QueueHandle_t) &handle->queue, &event, pdMS_TO_TICKS(1000)))
         {
-            // TODO send to parsing method.
-            for (uint32_t i = 0u; i < event.num_symbols; i++)
-                printf("ir %2ld: {%5d, %d} {%5d, %d}\r\n",
-                    i,
-                    event.received_symbols[i].duration0,
-                    event.received_symbols[i].level0,
-                    event.received_symbols[i].duration1,
-                    event.received_symbols[i].level1);
+            // Send to parsing method.
+            uint16_t address;
+            uint16_t command;
+            if (ir_decoder_format_nec(&event, &address, &command))
+            {
+                printf("IR decoder [NEC]: address=%04x command=%04x\r\n",
+                    address, command);
+            }
+            else
+                printf("IR decoder failed\r\n");
             // Trigger next reception.
             ir_decoder_receive(handle);
         }
