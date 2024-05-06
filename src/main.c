@@ -13,10 +13,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
-void app_main(void)
+static void display_chip_information(void)
 {
-    board_initialise();
-    printf("*** ESP UPnP remote ***\r\n");
     // Get chip information.
     esp_chip_info_t chip_info;
     uint32_t flash_size = 0;
@@ -39,6 +37,13 @@ void app_main(void)
         (chip_info.features & CHIP_FEATURE_BT) ? " BT" : "",
         (chip_info.features & CHIP_FEATURE_BLE) ? " BLE" : "",
         (chip_info.features & CHIP_FEATURE_IEEE802154) ? " IEEE-802.15.4" : "");
+}
+
+void app_main(void)
+{
+    board_initialise();
+    printf("*** ESP UPnP remote ***\r\n");
+    display_chip_information();
     // Process.
     led_soft_t led_soft = SOFT_ON;
     while (1)
