@@ -50,7 +50,7 @@ void app_main(void)
     // Initialise command processing.
     command_init();
     // IR decoder configuration.
-    ir_decoder_init(BOARD_IO_IR_RX);
+    ir_decoder_init(BOARD_IO_IR_RX, IR_CODESET_CFG);
     // Process.
     led_soft_t led_soft = SOFT_ON;
     while (1)

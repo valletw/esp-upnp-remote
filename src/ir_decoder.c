@@ -3,6 +3,7 @@
  * Copyright (c) 2024 William Vallet
  */
 
+#include "command.h"
 #include "ir_decoder.h"
 #include "driver/rmt_rx.h"
 #include "freertos/FreeRTOS.h"
@@ -21,6 +22,7 @@
 
 typedef struct
 {
+    uint8_t codeset;
     rmt_channel_handle_t rmt_handle;
     StaticTask_t task;
     StaticQueue_t queue;
@@ -30,6 +32,30 @@ typedef struct
 } ir_decoder_handle_t;
 
 static ir_decoder_handle_t ir_decoder_handle;
+
+static const uint16_t ir_decoder_codeset[][COMMAND_NB_MAX] = {
+    // Play/Pause, Previous, Next  , Mute  , Volume+, Volume-
+    { 0xF20D     , 0xE31C  , 0xE718, 0xFB04, 0xF30C , 0xEF10 }
+};
+static const size_t ir_decoder_codeset_nb =
+    sizeof(ir_decoder_codeset) / sizeof(COMMAND_NB_MAX * sizeof(uint16_t));
+
+static bool ir_decoder_parse_codeset(
+    uint8_t codeset, uint16_t ir_cmd, command_t * const cmd)
+{
+    assert(codeset < ir_decoder_codeset_nb);
+    assert(cmd);
+    const uint16_t * const codeset_cfg = ir_decoder_codeset[codeset];
+    for (size_t i = 0; i < COMMAND_NB_MAX; i++)
+    {
+        if (codeset_cfg[i] == ir_cmd)
+        {
+            *cmd = (command_t) i;
+            return true;
+        }
+    }
+    return false;
+}
 
 // Start RMT reception for specific decoder.
 static void ir_decoder_receive(ir_decoder_handle_t * const handle)
@@ -75,12 +101,21 @@ static void ir_decoder_task_handler(void *context)
                 (QueueHandle_t) &handle->queue, &event, pdMS_TO_TICKS(1000)))
         {
             // Send to parsing method.
-            uint16_t address;
-            uint16_t command;
-            if (ir_decoder_format_nec(&event, &address, &command))
+            uint16_t ir_address;
+            uint16_t ir_command;
+            if (ir_decoder_format_nec(&event, &ir_address, &ir_command))
             {
+                command_t command;
                 printf("IR decoder [NEC]: address=%04x command=%04x\r\n",
-                    address, command);
+                    ir_address, ir_command);
+                // Convert command if not a repeat and push it.
+                if (ir_command != 0u
+                    && ir_decoder_parse_codeset(
+                        handle->codeset, ir_command, &command)
+                    && command_push(command))
+                    printf("IR decoder: pushed\r\n");
+                else
+                    printf("IR decoder: command ignored\r\n");
             }
             else
                 printf("IR decoder failed\r\n");
@@ -90,8 +125,9 @@ static void ir_decoder_task_handler(void *context)
     }
 }
 
-void ir_decoder_init(uint8_t gpio_num)
+void ir_decoder_init(uint8_t gpio_num, uint8_t codeset)
 {
+    assert(codeset < ir_decoder_codeset_nb);
     memset(&ir_decoder_handle, 0, sizeof(ir_decoder_handle_t));
     const rmt_rx_channel_config_t rmt_cfg = {
         .gpio_num = gpio_num,
@@ -102,6 +138,9 @@ void ir_decoder_init(uint8_t gpio_num)
     const rmt_rx_event_callbacks_t rmt_cbs = {
         .on_recv_done = ir_decoder_rmt_handler
     };
+    // Register codeset.
+    ESP_LOGI(LOGGER_TAG, "codeset=%d", codeset);
+    ir_decoder_handle.codeset = codeset;
     // Initialise RX channel.
     ESP_ERROR_CHECK(rmt_new_rx_channel(&rmt_cfg, &ir_decoder_handle.rmt_handle));
     // Initialise RX queue and register handler.

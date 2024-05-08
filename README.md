@@ -52,3 +52,17 @@ The following control commands are:
 - **Volume up**: Increase the volume
 - **Volume down**: Decrease the volume
 - **Mute**: Cut off the volume
+
+## Infrared remote decoder
+
+Currently, NEC protocol is only supported. Remote NEC E553 is used as commands
+base. Here are the following commands ID supported:
+
+Command     | Code 0
+------------|:------:
+Play/Pause  | 0xF20D
+Previous    | 0xE31C
+Next        | 0xE718
+Volume Up   | 0xF30C
+Volume Down | 0xEF10
+Mute        | 0xFB04

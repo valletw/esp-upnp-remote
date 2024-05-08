@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 // Initialise IR decoder (RMT driver and parsing task).
-extern void ir_decoder_init(uint8_t gpio_num);
+extern void ir_decoder_init(uint8_t gpio_num, uint8_t codeset);
 // Event parser for NEC protocol.
 // Return true if parsing was successful, else false.
 extern bool ir_decoder_format_nec(
