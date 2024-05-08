@@ -13,8 +13,11 @@
 #include "freertos/task.h"
 #include "esp_chip_info.h"
 #include "esp_flash.h"
+#include "esp_log.h"
 #include <stdio.h>
 #include <stdint.h>
+
+#define LOGGER_TAG      "main"
 
 static void display_chip_information(void)
 {
@@ -23,19 +26,19 @@ static void display_chip_information(void)
     uint32_t flash_size = 0;
     esp_chip_info(&chip_info);
     esp_flash_get_size(NULL, &flash_size);
-    printf(
-        "Chip: %s [%d] (%d core(s)) rev %d.%d\r\n",
+    ESP_LOGI(LOGGER_TAG,
+        "Chip: %s [%d] (%d core(s)) rev %d.%d",
         CONFIG_IDF_TARGET, chip_info.model, chip_info.cores,
         chip_info.revision / 100, chip_info.revision % 100);
-    printf(
-        "Flash: %lu MB (%s)\r\n",
+    ESP_LOGI(LOGGER_TAG,
+        "Flash: %lu MB (%s)",
         flash_size / (1024 * 1024),
         (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
-    printf(
-        "PSRAM: %s\r\n",
+    ESP_LOGI(LOGGER_TAG,
+        "PSRAM: %s",
         (chip_info.features & CHIP_FEATURE_EMB_PSRAM) ? "Embedded" : "None");
-    printf(
-        "Features:%s%s%s%s\r\n",
+    ESP_LOGI(LOGGER_TAG,
+        "Features:%s%s%s%s",
         (chip_info.features & CHIP_FEATURE_WIFI_BGN) ? " WiFi" : "",
         (chip_info.features & CHIP_FEATURE_BT) ? " BT" : "",
         (chip_info.features & CHIP_FEATURE_BLE) ? " BLE" : "",
@@ -45,7 +48,8 @@ static void display_chip_information(void)
 void app_main(void)
 {
     board_initialise();
-    printf("*** ESP UPnP remote ***\r\n");
+    esp_log_level_set("*", ESP_LOG_INFO);
+    ESP_LOGI(LOGGER_TAG, "*** ESP UPnP remote ***");
     display_chip_information();
     // Initialise command processing.
     command_init();

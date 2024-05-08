@@ -6,11 +6,14 @@
 #include "command.h"
 #include "ir_decoder.h"
 #include "driver/rmt_rx.h"
+#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include <assert.h>
 #include <string.h>
+
+#define LOGGER_TAG "ir_decoder"
 
 #define IR_DECODER_TASK_STACK_SIZE       (4u * configMINIMAL_STACK_SIZE)
 #define IR_DECODER_TASK_PRIORITY         tskIDLE_PRIORITY
@@ -100,25 +103,33 @@ static void ir_decoder_task_handler(void *context)
         if (pdPASS == xQueueReceive(
                 (QueueHandle_t) &handle->queue, &event, pdMS_TO_TICKS(1000)))
         {
+            ESP_LOGD(LOGGER_TAG, "IR event detected nb=%d", event.num_symbols);
+            for (int i = 0; i < event.num_symbols; i++)
+            {
+                ESP_LOGV(LOGGER_TAG, "event %3d: {%d, %5d} {%d, %5d}",
+                    i,
+                    event.received_symbols[i].level0,
+                    event.received_symbols[i].duration0,
+                    event.received_symbols[i].level1,
+                    event.received_symbols[i].duration1);
+            }
             // Send to parsing method.
             uint16_t ir_address;
             uint16_t ir_command;
             if (ir_decoder_format_nec(&event, &ir_address, &ir_command))
             {
                 command_t command;
-                printf("IR decoder [NEC]: address=%04x command=%04x\r\n",
-                    ir_address, ir_command);
                 // Convert command if not a repeat and push it.
                 if (ir_command != 0u
                     && ir_decoder_parse_codeset(
                         handle->codeset, ir_command, &command)
                     && command_push(command))
-                    printf("IR decoder: pushed\r\n");
+                    ESP_LOGD(LOGGER_TAG, "Command pushed");
                 else
-                    printf("IR decoder: command ignored\r\n");
+                    ESP_LOGD(LOGGER_TAG, "Command ignored");
             }
             else
-                printf("IR decoder failed\r\n");
+                ESP_LOGW(LOGGER_TAG, "Formatter failed");
             // Trigger next reception.
             ir_decoder_receive(handle);
         }

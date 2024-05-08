@@ -4,11 +4,14 @@
  */
 
 #include "command.h"
+#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include <assert.h>
 #include <string.h>
+
+#define LOGGER_TAG "command"
 
 #define COMMAND_TASK_STACK_SIZE     (2u * configMINIMAL_STACK_SIZE)
 #define COMMAND_TASK_PRIORITY       tskIDLE_PRIORITY
@@ -57,7 +60,8 @@ static void command_task_handler(void *context)
             // Check if received command is in range.
             if (command >= COMMAND_NB_MAX)
                 continue;
-            printf("Command received cmd='%s'\r\n", command_debug_str[command]);
+            ESP_LOGI(LOGGER_TAG,
+                "Command received cmd='%s'", command_debug_str[command]);
         }
     }
 }

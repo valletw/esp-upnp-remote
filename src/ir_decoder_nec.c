@@ -4,7 +4,10 @@
  */
 
 #include "ir_decoder.h"
+#include "esp_log.h"
 #include <stdio.h>
+
+#define LOGGER_TAG "ir_decoder_nec"
 
 #define NEC_FRAME_NORMAL                  34u
 #define NEC_FRAME_REPEAT                   2u
@@ -97,6 +100,10 @@ static bool nec_parse_normal(
             symbols++;
         }
     }
+    ESP_LOGD(LOGGER_TAG,
+        "Frame decoded address=0x%04x command=0x%04x",
+        (address) ? *address : 0,
+        (command) ? *command : 0);
     return true;
 }
 
@@ -125,13 +132,13 @@ bool ir_decoder_format_nec(
     switch (event->num_symbols)
     {
         case NEC_FRAME_NORMAL:
-            printf("IR decoder [NEC]: parsing normal frame\r\n");
+            ESP_LOGD(LOGGER_TAG, "Normal frame");
             return nec_parse_normal(symbols, address, command);
         case NEC_FRAME_REPEAT:
-            printf("IR decoder [NEC]: parsing repeat frame\r\n");
+            ESP_LOGD(LOGGER_TAG, "Repeat frame");
             return nec_parse_repeat(symbols, address, command);
         default:
-            printf("IR decoder [NEC]: frame unsupported\r\n");
+            ESP_LOGW(LOGGER_TAG, "Frame unsupported");
             return false;
     }
 }
