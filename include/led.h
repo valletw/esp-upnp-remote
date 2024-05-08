@@ -3,6 +3,9 @@
  * Copyright (c) 2024 William Vallet
  */
 
+#ifndef LED_H_
+#define LED_H_
+
 // WiFi LED state.
 typedef enum
 {
@@ -32,3 +35,5 @@ extern void led_wifi_set(led_wifi_t value);
 extern void led_bt_set(led_bt_t value);
 // Control software LED state.
 extern void led_soft_set(led_soft_t value);
+
+#endif  // LED_H_
