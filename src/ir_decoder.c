@@ -35,7 +35,7 @@ typedef enum
 typedef struct
 {
     uint8_t parser;
-    uint16_t codeset[COMMAND_NB_MAX];
+    uint8_t codeset[COMMAND_NB_MAX];
 } ir_decoder_codeset_t;
 
 // IR decoder handle.
@@ -54,16 +54,16 @@ typedef struct
 static ir_decoder_handle_t ir_decoder_handle;
 
 static const ir_decoder_codeset_t ir_decoder_codeset[] = {
-    // Parser                ,  Play/Pause, Previous, Next  , Mute  , Volume+, Volume-
-    { IR_DECODER_PARSER_NEC  , { 0xF20D   , 0xE31C  , 0xE718, 0xFB04, 0xF30C , 0xEF10 }},
-    { IR_DECODER_PARSER_NEC_1, { 0xB847   , 0xBA45  , 0xB748, 0xF00F, 0xF807 , 0xF40B }},
+    // Parser                ,   P/P , Prev, Next, Mute, Vol+, Vol-
+    { IR_DECODER_PARSER_NEC  , { 0x0D, 0x1C, 0x18, 0x04, 0x0C, 0x10 }},
+    { IR_DECODER_PARSER_NEC_1, { 0x47, 0x45, 0x48, 0x0F, 0x07, 0x0B }},
 };
 static const size_t ir_decoder_codeset_nb =
     sizeof(ir_decoder_codeset) / sizeof(ir_decoder_codeset_t);
 
 // Parse codeset configuration to find command key.
 static bool ir_decoder_parse_codeset(
-    const ir_decoder_codeset_t * const codeset, uint16_t ir_cmd,
+    const ir_decoder_codeset_t * const codeset, uint8_t ir_cmd,
     command_t * const cmd)
 {
     assert(codeset);
@@ -84,7 +84,7 @@ static void ir_decoder_parser_nec(
     ir_decoder_handle_t * const handle,
     const rmt_rx_done_event_data_t * const event, bool variant)
 {
-    uint16_t ir_command;
+    uint8_t ir_command;
     if (ir_decoder_format_nec(event, NULL, &ir_command, variant))
     {
         command_t command;
@@ -99,7 +99,7 @@ static void ir_decoder_parser_nec(
                     ESP_LOGE(LOGGER_TAG, "Push command failed");
             }
             else
-                ESP_LOGW(LOGGER_TAG, "Command unsupported cmd=0x%04x",
+                ESP_LOGW(LOGGER_TAG, "Command unsupported cmd=0x%02x",
                     ir_command);
         }
         else

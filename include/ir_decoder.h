@@ -17,6 +17,6 @@ extern void ir_decoder_init(uint8_t gpio_num, uint8_t codeset);
 // Return true if parsing was successful, else false.
 extern bool ir_decoder_format_nec(
     const rmt_rx_done_event_data_t * const event, uint16_t * const address,
-    uint16_t * const command, bool variant);
+    uint8_t * const command, bool variant);
 
 #endif  // IR_DECODER_H_

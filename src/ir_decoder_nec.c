@@ -67,7 +67,7 @@ static bool nec_check_one(const rmt_symbol_word_t * const symbol)
 
 static bool nec_parse_normal(
     const rmt_symbol_word_t *symbols, uint16_t * const address,
-    uint16_t * const command, bool variant)
+    uint8_t * const command, bool variant)
 {
     assert(symbols);
     // Normal frame is composed of leading code, address and command.
@@ -96,11 +96,11 @@ static bool nec_parse_normal(
     // Decode command if requested.
     if (command)
     {
-        *command = 0u;
+        uint16_t command_raw = 0u;
         for (uint32_t i = 0; i < 16u; i++)
         {
             if (nec_check_one(symbols))
-                *command |= 1u << i;
+                command_raw |= 1u << i;
             else if (nec_check_zero(symbols))
             {
                 // Already at zero, nothing to do.
@@ -109,9 +109,13 @@ static bool nec_parse_normal(
                 return false;
             symbols++;
         }
+        // Check inversion format.
+        if (((~command_raw & 0xFF00u) >> 8u) != (command_raw & 0xFFu))
+            return false;
+        *command = command_raw & 0xFFu;
     }
     ESP_LOGD(LOGGER_TAG,
-        "Frame decoded address=0x%04x command=0x%04x",
+        "Frame decoded address=0x%04x command=0x%02x",
         (address) ? *address : 0,
         (command) ? *command : 0);
     return true;
@@ -119,7 +123,7 @@ static bool nec_parse_normal(
 
 static bool nec_parse_repeat(
     const rmt_symbol_word_t * const symbols, uint16_t * const address,
-    uint16_t * const command, bool variant)
+    uint8_t * const command, bool variant)
 {
     assert(symbols);
     // No information on this frame, use only first symbol.
@@ -136,7 +140,7 @@ static bool nec_parse_repeat(
 
 bool ir_decoder_format_nec(
     const rmt_rx_done_event_data_t * const event, uint16_t * const address,
-    uint16_t * const command, bool variant)
+    uint8_t * const command, bool variant)
 {
     const rmt_symbol_word_t * const symbols = event->received_symbols;
     switch (event->num_symbols)
@@ -146,7 +150,7 @@ bool ir_decoder_format_nec(
             return nec_parse_normal(symbols, address, command, variant);
         case NEC_FRAME_REPEAT:
             ESP_LOGD(LOGGER_TAG, "Repeat frame");
-            return nec_parse_repeat(symbols, address, command, variant);
+            return nec_parse_repeat(symbols, NULL, NULL, variant);
         default:
             ESP_LOGW(LOGGER_TAG, "Frame unsupported");
             return false;
