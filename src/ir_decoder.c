@@ -27,6 +27,8 @@
 typedef enum
 {
     IR_DECODER_PARSER_NEC = 0,      // NEC protocol.
+    IR_DECODER_PARSER_NEC_1,        // NEC protocol with first pulse shorter.
+                                    // Note: used by Samsung remote.
 } ir_decoder_parser_t;
 
 // IR decoder codeset configuration.
@@ -52,8 +54,9 @@ typedef struct
 static ir_decoder_handle_t ir_decoder_handle;
 
 static const ir_decoder_codeset_t ir_decoder_codeset[] = {
-    // Parser              ,  Play/Pause, Previous, Next  , Mute  , Volume+, Volume-
-    { IR_DECODER_PARSER_NEC, { 0xF20D   , 0xE31C  , 0xE718, 0xFB04, 0xF30C , 0xEF10 }}
+    // Parser                ,  Play/Pause, Previous, Next  , Mute  , Volume+, Volume-
+    { IR_DECODER_PARSER_NEC  , { 0xF20D   , 0xE31C  , 0xE718, 0xFB04, 0xF30C , 0xEF10 }},
+    { IR_DECODER_PARSER_NEC_1, { 0xB847   , 0xBA45  , 0xB748, 0xF00F, 0xF807 , 0xF40B }},
 };
 static const size_t ir_decoder_codeset_nb =
     sizeof(ir_decoder_codeset) / sizeof(ir_decoder_codeset_t);
@@ -79,10 +82,10 @@ static bool ir_decoder_parse_codeset(
 // Manage NEC protocol.
 static void ir_decoder_parser_nec(
     ir_decoder_handle_t * const handle,
-    const rmt_rx_done_event_data_t * const event)
+    const rmt_rx_done_event_data_t * const event, bool variant)
 {
     uint16_t ir_command;
-    if (ir_decoder_format_nec(event, NULL, &ir_command))
+    if (ir_decoder_format_nec(event, NULL, &ir_command, variant))
     {
         command_t command;
         // Convert command if not a repeat and push it.
@@ -164,7 +167,10 @@ static void ir_decoder_task_handler(void *context)
             switch (handle->codeset->parser)
             {
                 case IR_DECODER_PARSER_NEC:
-                    ir_decoder_parser_nec(handle, &event);
+                    ir_decoder_parser_nec(handle, &event, false);
+                    break;
+                case IR_DECODER_PARSER_NEC_1:
+                    ir_decoder_parser_nec(handle, &event, true);
                     break;
                 default:
                     ESP_LOGW(LOGGER_TAG, "IR parser unsupported");

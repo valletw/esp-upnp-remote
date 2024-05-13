@@ -55,14 +55,19 @@ The following control commands are:
 
 ## Infrared remote decoder
 
-Currently, NEC protocol is only supported. Remote NEC E553 is used as commands
-base. Here are the following commands ID supported:
+Currently, NEC protocol is only supported. Here are the following commands ID
+supported:
 
-Command     | Code 0
-------------|:------:
-Play/Pause  | 0xF20D
-Previous    | 0xE31C
-Next        | 0xE718
-Volume Up   | 0xF30C
-Volume Down | 0xEF10
-Mute        | 0xFB04
+Brand / Mode        | Code
+--------------------|:----:
+NEC E553            | 0
+Samsung BN59-01175N | 1
+
+Command     | Code 0 | Code 1
+------------|:------:|:------:
+Play/Pause  | 0xF20D | 0xB847
+Previous    | 0xE31C | 0xBA45
+Next        | 0xE718 | 0xB748
+Volume Up   | 0xF30C | 0xF00F
+Volume Down | 0xEF10 | 0xF807
+Mute        | 0xFB04 | 0xF40B

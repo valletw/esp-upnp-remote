@@ -27,18 +27,28 @@ static inline bool nec_check_range(uint32_t value, uint32_t expected)
         && (value < (expected + NEC_RANGE_MARGIN));
 }
 
-static bool nec_check_leading_code(const rmt_symbol_word_t * const symbol)
+static bool nec_check_leading_code(
+    const rmt_symbol_word_t * const symbol, bool variant)
 {
     assert(symbol);
-    return nec_check_range(symbol->duration0, NEC_LEADING_CODE_DURATION_0)
-        && nec_check_range(symbol->duration1, NEC_LEADING_CODE_DURATION_1);
+    if (variant)
+        return nec_check_range(symbol->duration0, NEC_LEADING_CODE_DURATION_1)
+            && nec_check_range(symbol->duration1, NEC_LEADING_CODE_DURATION_1);
+    else
+        return nec_check_range(symbol->duration0, NEC_LEADING_CODE_DURATION_0)
+            && nec_check_range(symbol->duration1, NEC_LEADING_CODE_DURATION_1);
 }
 
-static bool nec_check_repeat_code(const rmt_symbol_word_t * const symbol)
+static bool nec_check_repeat_code(
+    const rmt_symbol_word_t * const symbol, bool variant)
 {
     assert(symbol);
-    return nec_check_range(symbol->duration0, NEC_REPEAT_CODE_DURATION_0)
-        && nec_check_range(symbol->duration1, NEC_REPEAT_CODE_DURATION_1);
+    if (variant)
+        return nec_check_range(symbol->duration0, NEC_REPEAT_CODE_DURATION_1)
+            && nec_check_range(symbol->duration1, NEC_REPEAT_CODE_DURATION_1);
+    else
+        return nec_check_range(symbol->duration0, NEC_REPEAT_CODE_DURATION_0)
+            && nec_check_range(symbol->duration1, NEC_REPEAT_CODE_DURATION_1);
 }
 
 static bool nec_check_zero(const rmt_symbol_word_t * const symbol)
@@ -57,12 +67,12 @@ static bool nec_check_one(const rmt_symbol_word_t * const symbol)
 
 static bool nec_parse_normal(
     const rmt_symbol_word_t *symbols, uint16_t * const address,
-    uint16_t * const command)
+    uint16_t * const command, bool variant)
 {
     assert(symbols);
     // Normal frame is composed of leading code, address and command.
     // Check if leading code is valid.
-    if (!nec_check_leading_code(symbols++))
+    if (!nec_check_leading_code(symbols++, variant))
         return false;
     // Decode address if requested.
     if (address)
@@ -109,11 +119,11 @@ static bool nec_parse_normal(
 
 static bool nec_parse_repeat(
     const rmt_symbol_word_t * const symbols, uint16_t * const address,
-    uint16_t * const command)
+    uint16_t * const command, bool variant)
 {
     assert(symbols);
     // No information on this frame, use only first symbol.
-    if (nec_check_repeat_code(&symbols[0]))
+    if (nec_check_repeat_code(&symbols[0], variant))
     {
         if (address)
             *address = 0u;
@@ -126,17 +136,17 @@ static bool nec_parse_repeat(
 
 bool ir_decoder_format_nec(
     const rmt_rx_done_event_data_t * const event, uint16_t * const address,
-    uint16_t * const command)
+    uint16_t * const command, bool variant)
 {
     const rmt_symbol_word_t * const symbols = event->received_symbols;
     switch (event->num_symbols)
     {
         case NEC_FRAME_NORMAL:
             ESP_LOGD(LOGGER_TAG, "Normal frame");
-            return nec_parse_normal(symbols, address, command);
+            return nec_parse_normal(symbols, address, command, variant);
         case NEC_FRAME_REPEAT:
             ESP_LOGD(LOGGER_TAG, "Repeat frame");
-            return nec_parse_repeat(symbols, address, command);
+            return nec_parse_repeat(symbols, address, command, variant);
         default:
             ESP_LOGW(LOGGER_TAG, "Frame unsupported");
             return false;
