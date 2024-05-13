@@ -23,9 +23,23 @@
 #define IR_DECODER_THRESHOLD_MIN_NS      1250u
 #define IR_DECODER_THRESHOLD_MAX_NS      12000000u
 
+// IR decoder parser selector.
+typedef enum
+{
+    IR_DECODER_PARSER_NEC = 0,      // NEC protocol.
+} ir_decoder_parser_t;
+
+// IR decoder codeset configuration.
 typedef struct
 {
-    uint8_t codeset;
+    uint8_t parser;
+    uint16_t codeset[COMMAND_NB_MAX];
+} ir_decoder_codeset_t;
+
+// IR decoder handle.
+typedef struct
+{
+    const ir_decoder_codeset_t *codeset;
     rmt_channel_handle_t rmt_handle;
     StaticTask_t task;
     StaticQueue_t queue;
@@ -34,30 +48,62 @@ typedef struct
     rmt_symbol_word_t raw_symbols[IR_DECODER_RAW_SYMBOLS_NB];
 } ir_decoder_handle_t;
 
+
 static ir_decoder_handle_t ir_decoder_handle;
 
-static const uint16_t ir_decoder_codeset[][COMMAND_NB_MAX] = {
-    // Play/Pause, Previous, Next  , Mute  , Volume+, Volume-
-    { 0xF20D     , 0xE31C  , 0xE718, 0xFB04, 0xF30C , 0xEF10 }
+static const ir_decoder_codeset_t ir_decoder_codeset[] = {
+    // Parser              ,  Play/Pause, Previous, Next  , Mute  , Volume+, Volume-
+    { IR_DECODER_PARSER_NEC, { 0xF20D   , 0xE31C  , 0xE718, 0xFB04, 0xF30C , 0xEF10 }}
 };
 static const size_t ir_decoder_codeset_nb =
-    sizeof(ir_decoder_codeset) / sizeof(COMMAND_NB_MAX * sizeof(uint16_t));
+    sizeof(ir_decoder_codeset) / sizeof(ir_decoder_codeset_t);
 
+// Parse codeset configuration to find command key.
 static bool ir_decoder_parse_codeset(
-    uint8_t codeset, uint16_t ir_cmd, command_t * const cmd)
+    const ir_decoder_codeset_t * const codeset, uint16_t ir_cmd,
+    command_t * const cmd)
 {
-    assert(codeset < ir_decoder_codeset_nb);
+    assert(codeset);
     assert(cmd);
-    const uint16_t * const codeset_cfg = ir_decoder_codeset[codeset];
     for (size_t i = 0; i < COMMAND_NB_MAX; i++)
     {
-        if (codeset_cfg[i] == ir_cmd)
+        if (codeset->codeset[i] == ir_cmd)
         {
             *cmd = (command_t) i;
             return true;
         }
     }
     return false;
+}
+
+// Manage NEC protocol.
+static void ir_decoder_parser_nec(
+    ir_decoder_handle_t * const handle,
+    const rmt_rx_done_event_data_t * const event)
+{
+    uint16_t ir_command;
+    if (ir_decoder_format_nec(event, NULL, &ir_command))
+    {
+        command_t command;
+        // Convert command if not a repeat and push it.
+        if (ir_command != 0u)
+        {
+            if (ir_decoder_parse_codeset(
+                    handle->codeset, ir_command, &command))
+            {
+                ESP_LOGD(LOGGER_TAG, "Command found");
+                if (!command_push(command))
+                    ESP_LOGE(LOGGER_TAG, "Push command failed");
+            }
+            else
+                ESP_LOGW(LOGGER_TAG, "Command unsupported cmd=0x%04x",
+                    ir_command);
+        }
+        else
+            ESP_LOGD(LOGGER_TAG, "Command ignored");
+    }
+    else
+        ESP_LOGW(LOGGER_TAG, "NEC formatter failed");
 }
 
 // Start RMT reception for specific decoder.
@@ -95,6 +141,7 @@ static void ir_decoder_task_handler(void *context)
     assert(context);
     rmt_rx_done_event_data_t event;
     ir_decoder_handle_t * const handle = (ir_decoder_handle_t *) context;
+    assert(handle->codeset);
     // Trigger first reception.
     ir_decoder_receive(handle);
     while (true)
@@ -114,22 +161,15 @@ static void ir_decoder_task_handler(void *context)
                     event.received_symbols[i].duration1);
             }
             // Send to parsing method.
-            uint16_t ir_address;
-            uint16_t ir_command;
-            if (ir_decoder_format_nec(&event, &ir_address, &ir_command))
+            switch (handle->codeset->parser)
             {
-                command_t command;
-                // Convert command if not a repeat and push it.
-                if (ir_command != 0u
-                    && ir_decoder_parse_codeset(
-                        handle->codeset, ir_command, &command)
-                    && command_push(command))
-                    ESP_LOGD(LOGGER_TAG, "Command pushed");
-                else
-                    ESP_LOGD(LOGGER_TAG, "Command ignored");
+                case IR_DECODER_PARSER_NEC:
+                    ir_decoder_parser_nec(handle, &event);
+                    break;
+                default:
+                    ESP_LOGW(LOGGER_TAG, "IR parser unsupported");
+                    break;
             }
-            else
-                ESP_LOGW(LOGGER_TAG, "Formatter failed");
             // Trigger next reception.
             ir_decoder_receive(handle);
         }
@@ -151,7 +191,7 @@ void ir_decoder_init(uint8_t gpio_num, uint8_t codeset)
     };
     // Register codeset.
     ESP_LOGI(LOGGER_TAG, "codeset=%d", codeset);
-    ir_decoder_handle.codeset = codeset;
+    ir_decoder_handle.codeset = &ir_decoder_codeset[codeset];
     // Initialise RX channel.
     ESP_ERROR_CHECK(rmt_new_rx_channel(&rmt_cfg, &ir_decoder_handle.rmt_handle));
     // Initialise RX queue and register handler.
