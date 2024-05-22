@@ -8,12 +8,15 @@
 #include "command.h"
 #include "ir_decoder.h"
 #include "led.h"
+#include "wifi.h"
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_chip_info.h"
+#include "esp_event.h"
 #include "esp_flash.h"
 #include "esp_log.h"
+#include "nvs_flash.h"
 #include <stdio.h>
 #include <stdint.h>
 
@@ -45,12 +48,29 @@ static void display_chip_information(void)
         (chip_info.features & CHIP_FEATURE_IEEE802154) ? " IEEE-802.15.4" : "");
 }
 
+static void env_init(void)
+{
+    // Storage initialisation.
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES
+        || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ESP_ERROR_CHECK(nvs_flash_init());
+    }
+    // Event loop initialisation.
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+}
+
 void app_main(void)
 {
     board_initialise();
     esp_log_level_set("*", ESP_LOG_INFO);
     ESP_LOGI(LOGGER_TAG, "*** ESP UPnP remote ***");
     display_chip_information();
+    // Initialise WiFi (provisioning or connection).
+    env_init();
+    wifi_init();
     // Initialise command processing.
     command_init();
     // IR decoder configuration.
