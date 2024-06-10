@@ -8,6 +8,7 @@
 #include "command.h"
 #include "ir_decoder.h"
 #include "led.h"
+#include "ssdp.h"
 #include "wifi.h"
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
@@ -77,10 +78,15 @@ void app_main(void)
     ir_decoder_init(BOARD_IO_IR_RX, IR_CODESET_CFG);
     // Process.
     led_soft_t led_soft = SOFT_ON;
+    size_t count = 0;
     while (1)
     {
         led_soft_set(led_soft);
         led_soft = (led_soft == SOFT_ON) ? SOFT_OFF : SOFT_ON;
+        // DEBUG: SSDP search every 10sec.
+        count++;
+        if (count % 10 == 0)
+            ssdp_discovery_dump();
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
